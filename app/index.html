@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Health Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --yellow: #ca8a04;
+      --yellow-bg: #fef3c7;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      margin: 0 0 32px 0;
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 680px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 14px 20px;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    tbody td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #fafbfc; }
+
+    .company {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .date {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+
+    .stage {
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .badge.healthy   { background: var(--green-bg);  color: var(--green); }
+    .badge.healthy .dot   { background: var(--green); }
+
+    .badge.at-risk   { background: var(--yellow-bg); color: var(--yellow); }
+    .badge.at-risk .dot   { background: var(--yellow); }
+
+    .badge.critical  { background: var(--red-bg);    color: var(--red); }
+    .badge.critical .dot  { background: var(--red); }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+    }
+
+    .tile .label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .tile .metric {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tile .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .tile.healthy  .metric { color: var(--green); }
+    .tile.at-risk  .metric { color: var(--yellow); }
+    .tile.critical .metric { color: var(--red); }
+
+    @media (max-width: 700px) {
+      .summary { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .filters {
+      display: inline-flex;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      box-shadow: var(--shadow);
+    }
+
+    .filter-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .filter-btn:hover { color: var(--text); }
+
+    .filter-btn.active {
+      background: var(--text);
+      color: var(--surface);
+    }
+
+    .filter-btn .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .filter-btn[data-filter="healthy"]  .dot { background: var(--green); }
+    .filter-btn[data-filter="at-risk"]  .dot { background: var(--yellow); }
+    .filter-btn[data-filter="critical"] .dot { background: var(--red); }
+
+    .sort-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .sort-control select {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 28px 6px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+
+    .toolbar-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .reset-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .reset-btn:hover {
+      background: var(--red-bg);
+      color: var(--red);
+      border-color: var(--red-bg);
+    }
+
+    .last-updated {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .empty-row td {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 32px;
+      font-style: italic;
+    }
+
+    .health-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .reason {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    tbody tr.deal-row { cursor: pointer; }
+    tbody tr.deal-row.expanded { background: #fafbfc; }
+
+    .chevron {
+      display: inline-block;
+      width: 10px;
+      color: var(--text-muted);
+      margin-right: 8px;
+      transition: transform 0.15s;
+    }
+    tbody tr.deal-row.expanded .chevron { transform: rotate(90deg); }
+
+    tr.detail-row > td {
+      padding: 0;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-panel {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px 24px;
+      padding: 20px 24px 24px 44px;
+    }
+
+    .detail-panel .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .detail-panel .field.full { grid-column: 1 / -1; }
+
+    .detail-panel .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .detail-panel .field-value {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .detail-panel ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .detail-panel li { margin-bottom: 2px; }
+
+    .detail-panel input[type="number"],
+    .detail-panel input[type="text"],
+    .detail-panel select,
+    .detail-panel textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      width: 100%;
+      max-width: 320px;
+      box-shadow: var(--shadow);
+    }
+
+    .detail-panel textarea {
+      min-height: 70px;
+      max-width: 100%;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .detail-panel input:focus,
+    .detail-panel select:focus,
+    .detail-panel textarea:focus {
+      outline: 2px solid var(--text);
+      outline-offset: 1px;
+    }
+
+    @media (max-width: 700px) {
+      .detail-panel {
+        grid-template-columns: 1fr;
+        padding: 16px 20px 20px 20px;
+      }
+    }
+
+    /* Phone widths: stack toolbar, allow table to scroll horizontally if needed,
+       tighten paddings, collapse summary to a single column. */
+    @media (max-width: 480px) {
+      .container { padding: 20px 12px; }
+      header h1 { font-size: 22px; }
+      header p { font-size: 14px; margin-bottom: 20px; }
+      .summary { grid-template-columns: 1fr; }
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .toolbar-right {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .filters { overflow-x: auto; }
+      .card { overflow-x: auto; }
+      thead th { padding: 10px 12px; }
+      tbody td { padding: 12px; }
+      table { font-size: 13px; }
+      .detail-panel { padding: 14px 12px 16px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Deal Health Dashboard</h1>
+      <p>
+        A single-page view of all active deals in your pipeline. Health indicators make it
+        easy to see which deals are on track and which ones need your attention today.
+      </p>
+    </header>
+
+    <section class="summary" id="summary"></section>
+
+    <div class="toolbar">
+      <div class="filters" id="filters" role="group" aria-label="Filter deals by health">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="healthy"><span class="dot"></span>Healthy</button>
+        <button class="filter-btn" data-filter="at-risk"><span class="dot"></span>At Risk</button>
+        <button class="filter-btn" data-filter="critical"><span class="dot"></span>Critical</button>
+      </div>
+      <div class="toolbar-right">
+        <label class="sort-control">
+          Sort by
+          <select id="sort">
+            <option value="attention">Needs attention first</option>
+            <option value="value-desc">Value (high to low)</option>
+            <option value="value-asc">Value (low to high)</option>
+            <option value="date-asc">Close date (soonest)</option>
+            <option value="date-desc">Close date (latest)</option>
+          </select>
+        </label>
+        <button id="reset-btn" class="reset-btn" type="button" title="Restore the original 8 sample deals">Reset to defaults</button>
+      </div>
+    </div>
+
+    <div id="last-updated" class="last-updated" aria-live="polite"></div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Value</th>
+            <th>Expected Close</th>
+            <th>Stage</th>
+            <th>Health</th>
+          </tr>
+        </thead>
+        <tbody id="deals-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "dealDashboard.deals.v1";
+    const TIMESTAMP_KEY = "dealDashboard.lastUpdated.v1";
+
+    const defaultDeals = [
+      {
+        company: "Acme Corp", value: 48000, closeDate: "2026-05-30",
+        stage: "Contract Sent", status: "healthy", reason: "Contract sent",
+        riskFactors: ["Awaiting legal review on standard MSA"],
+        lastContact: "2026-04-28",
+        nextSteps: "Follow up Friday on signed contract",
+        notes: "Renewal of existing 2-year agreement. Champion is the VP of Ops."
+      },
+      {
+        company: "Globex", value: 120000, closeDate: "2026-06-15",
+        stage: "Negotiation", status: "healthy", reason: "Champion engaged",
+        riskFactors: ["Procurement adds 2-week buffer"],
+        lastContact: "2026-04-29",
+        nextSteps: "Send revised SOW with discount tier",
+        notes: "Expansion into EU region. Champion has executive sponsor."
+      },
+      {
+        company: "Initech", value: 75000, closeDate: "2026-05-20",
+        stage: "Proposal", status: "at-risk", reason: "No activity 10 days",
+        riskFactors: ["No response to last 2 emails", "Decision-maker on leave"],
+        lastContact: "2026-04-21",
+        nextSteps: "Call champion's manager directly",
+        notes: "Proposal landed but radio silence since. Possibly de-prioritized."
+      },
+      {
+        company: "Umbrella Inc", value: 22000, closeDate: "2026-05-10",
+        stage: "Negotiation", status: "at-risk", reason: "Pricing pushback",
+        riskFactors: ["Asked for 30% discount", "Comparing 2 competitors"],
+        lastContact: "2026-04-30",
+        nextSteps: "Schedule pricing alignment call this week",
+        notes: "Small pilot. Limited budget but high strategic fit."
+      },
+      {
+        company: "Soylent", value: 200000, closeDate: "2026-06-01",
+        stage: "Discovery", status: "critical", reason: "Champion left",
+        riskFactors: ["Champion left the company", "New stakeholder unknown", "No internal advocate"],
+        lastContact: "2026-04-15",
+        nextSteps: "Identify new champion via LinkedIn outreach",
+        notes: "Was our strongest Q2 deal. Need to rebuild relationship from scratch."
+      },
+      {
+        company: "Hooli", value: 90000, closeDate: "2026-05-25",
+        stage: "Negotiation", status: "critical", reason: "Competitor selected",
+        riskFactors: ["Verbally informed competitor was chosen", "Procurement has not signed yet"],
+        lastContact: "2026-04-27",
+        nextSteps: "Last-ditch executive outreach with revised offer",
+        notes: "Long shot. Worth one more attempt before marking lost."
+      },
+      {
+        company: "Pied Piper", value: 15000, closeDate: "2026-06-20",
+        stage: "Verbal Commit", status: "healthy", reason: "Verbal commit",
+        riskFactors: ["Small deal, low priority for their procurement"],
+        lastContact: "2026-04-29",
+        nextSteps: "Send order form for signature",
+        notes: "Founder personally championing. Quick close expected."
+      },
+      {
+        company: "Stark Industries", value: 310000, closeDate: "2026-07-01",
+        stage: "Procurement", status: "healthy", reason: "In procurement",
+        riskFactors: ["Large deal in legal review", "Multiple business units involved"],
+        lastContact: "2026-04-26",
+        nextSteps: "Weekly procurement sync; align on data security addendum",
+        notes: "Largest deal in pipeline. Multi-year. CFO involved."
+      }
+    ];
+
+    function loadDeals() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultDeals);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) return structuredClone(defaultDeals);
+        return parsed;
+      } catch (e) {
+        console.warn("Failed to load deals from localStorage; using defaults.", e);
+        return structuredClone(defaultDeals);
+      }
+    }
+
+    function saveDeals() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
+        // R13: record the moment of the last user edit so it survives refresh.
+        const now = new Date().toISOString();
+        localStorage.setItem(TIMESTAMP_KEY, now);
+        renderLastUpdated();
+      } catch (e) {
+        console.warn("Failed to save deals to localStorage.", e);
+      }
+    }
+
+    const fmtTimestamp = new Intl.DateTimeFormat("en-US", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit"
+    });
+
+    function renderLastUpdated() {
+      const el = document.getElementById("last-updated");
+      const iso = localStorage.getItem(TIMESTAMP_KEY);
+      if (!iso) {
+        el.textContent = "Original sample data";
+        return;
+      }
+      const d = new Date(iso);
+      // Defensive: if the stored value is corrupted, fall back to the neutral label
+      // rather than rendering "Invalid Date".
+      if (isNaN(d.getTime())) {
+        el.textContent = "Original sample data";
+        return;
+      }
+      el.textContent = `Last updated: ${fmtTimestamp.format(d)}`;
+    }
+
+    const deals = loadDeals();
+
+    const statusLabel = {
+      healthy:  "Healthy",
+      "at-risk": "At Risk",
+      critical: "Critical"
+    };
+
+    const fmtCurrency = new Intl.NumberFormat("en-US", {
+      style: "currency", currency: "USD", maximumFractionDigits: 0
+    });
+
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric"
+    });
+
+    // R3 + R14: helpers compute totals over whatever dataset is passed in,
+    // so the same code can summarize the full set or the active-filter subset.
+    const totalPipeline = (data) => data.reduce((sum, d) => sum + d.value, 0);
+    const countBy = (data, s) => data.filter(d => d.status === s).length;
+    const valueBy = (data, s) => data.filter(d => d.status === s).reduce((sum, d) => sum + d.value, 0);
+    const needsAttentionTotal = (data) => valueBy(data, "at-risk") + valueBy(data, "critical");
+
+    function getFilteredDeals() {
+      return activeFilter === "all" ? deals.slice() : deals.filter(d => d.status === activeFilter);
+    }
+
+    function renderSummary() {
+      const data = getFilteredDeals();
+      const scopeLabel = activeFilter === "all" ? "all deals" : `filtered: ${statusLabel[activeFilter]}`;
+      document.getElementById("summary").innerHTML = `
+        <div class="tile">
+          <div class="label">Total Deals</div>
+          <div class="metric">${data.length}</div>
+          <div class="sub">${fmtCurrency.format(totalPipeline(data))} · ${scopeLabel}</div>
+        </div>
+        <div class="tile healthy">
+          <div class="label">Healthy</div>
+          <div class="metric">${countBy(data, "healthy")}</div>
+          <div class="sub">${fmtCurrency.format(valueBy(data, "healthy"))}</div>
+        </div>
+        <div class="tile at-risk">
+          <div class="label">At Risk</div>
+          <div class="metric">${countBy(data, "at-risk")}</div>
+          <div class="sub">${fmtCurrency.format(valueBy(data, "at-risk"))}</div>
+        </div>
+        <div class="tile critical">
+          <div class="label">Critical</div>
+          <div class="metric">${countBy(data, "critical")}</div>
+          <div class="sub">${fmtCurrency.format(needsAttentionTotal(data))} at-risk + critical</div>
+        </div>
+      `;
+    }
+
+    let activeFilter = "all";
+    let activeSort = "attention";
+    let expandedCompany = null;
+
+    const attentionRank = { critical: 0, "at-risk": 1, healthy: 2 };
+
+    function renderDeals() {
+      let visible = activeFilter === "all"
+        ? deals.slice()
+        : deals.filter(d => d.status === activeFilter);
+
+      visible.sort((a, b) => {
+        switch (activeSort) {
+          case "attention":
+            if (attentionRank[a.status] !== attentionRank[b.status]) {
+              return attentionRank[a.status] - attentionRank[b.status];
+            }
+            return b.value - a.value;
+          case "value-desc": return b.value - a.value;
+          case "value-asc":  return a.value - b.value;
+          case "date-asc":   return a.closeDate.localeCompare(b.closeDate);
+          case "date-desc":  return b.closeDate.localeCompare(a.closeDate);
+        }
+      });
+
+      const tbody = document.getElementById("deals-body");
+      if (visible.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No deals match this filter.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = visible.map(d => {
+        const isOpen = expandedCompany === d.company;
+        const detail = isOpen ? `
+          <tr class="detail-row">
+            <td colspan="5">
+              <div class="detail-panel" data-company="${d.company}">
+                <div class="field">
+                  <span class="field-label">Value</span>
+                  <input type="number" data-edit="value" min="0" step="1000" value="${d.value}" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Stage</span>
+                  <input type="text" data-edit="stage" value="${d.stage}" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Health</span>
+                  <select data-edit="status">
+                    <option value="healthy"  ${d.status === "healthy"  ? "selected" : ""}>Healthy</option>
+                    <option value="at-risk"  ${d.status === "at-risk"  ? "selected" : ""}>At Risk</option>
+                    <option value="critical" ${d.status === "critical" ? "selected" : ""}>Critical</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="field-label">Last Contact</span>
+                  <span class="field-value">${fmtDate(d.lastContact)}</span>
+                </div>
+                <div class="field full">
+                  <span class="field-label">Risk Factors</span>
+                  <span class="field-value">
+                    <ul>${d.riskFactors.map(r => `<li>${r}</li>`).join("")}</ul>
+                  </span>
+                </div>
+                <div class="field full">
+                  <span class="field-label">Next Steps</span>
+                  <span class="field-value">${d.nextSteps}</span>
+                </div>
+                <div class="field full">
+                  <span class="field-label">Notes</span>
+                  <textarea data-edit="notes">${d.notes}</textarea>
+                </div>
+              </div>
+            </td>
+          </tr>
+        ` : "";
+        return `
+          <tr class="deal-row ${isOpen ? "expanded" : ""}" data-company="${d.company}">
+            <td class="company"><span class="chevron">›</span>${d.company}</td>
+            <td class="value">${fmtCurrency.format(d.value)}</td>
+            <td class="date">${fmtDate(d.closeDate)}</td>
+            <td class="stage">${d.stage}</td>
+            <td>
+              <div class="health-cell">
+                <span class="badge ${d.status}">
+                  <span class="dot"></span>${statusLabel[d.status]}
+                </span>
+                <span class="reason">${d.reason}</span>
+              </div>
+            </td>
+          </tr>
+          ${detail}
+        `;
+      }).join("");
+    }
+
+    document.getElementById("filters").addEventListener("click", (e) => {
+      const btn = e.target.closest(".filter-btn");
+      if (!btn) return;
+      activeFilter = btn.dataset.filter;
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+      renderSummary();
+      renderDeals();
+    });
+
+    document.getElementById("sort").addEventListener("change", (e) => {
+      activeSort = e.target.value;
+      renderDeals();
+    });
+
+    document.getElementById("deals-body").addEventListener("click", (e) => {
+      if (e.target.closest(".detail-panel")) return;
+      const row = e.target.closest("tr.deal-row");
+      if (!row) return;
+      const company = row.dataset.company;
+      expandedCompany = expandedCompany === company ? null : company;
+      renderDeals();
+    });
+
+    function applyEdit(target) {
+      const field = target.dataset.edit;
+      if (!field) return;
+      const panel = target.closest(".detail-panel");
+      const company = panel.dataset.company;
+      const deal = deals.find(d => d.company === company);
+      if (!deal) return;
+      deal[field] = field === "value" ? Number(target.value) || 0 : target.value;
+      return { deal, field };
+    }
+
+    document.getElementById("deals-body").addEventListener("input", (e) => {
+      const result = applyEdit(e.target);
+      if (!result) return;
+      const { deal, field } = result;
+      // Live inline updates that don't require a re-render (preserves input focus)
+      if (field === "stage") {
+        const row = document.querySelector(`tr.deal-row[data-company="${CSS.escape(deal.company)}"]`);
+        if (row) row.querySelector(".stage").textContent = deal.stage;
+      }
+      // notes: data updated, no UI to refresh outside the textarea
+      saveDeals();
+    });
+
+    document.getElementById("deals-body").addEventListener("change", (e) => {
+      const field = e.target.dataset.edit;
+      if (!field) return;
+      // For status and value, re-render summary tiles and table so badge color, totals, and sort reflect the change
+      if (field === "status" || field === "value") {
+        applyEdit(e.target);
+        renderSummary();
+        renderDeals();
+        saveDeals();
+      }
+    });
+
+    document.getElementById("reset-btn").addEventListener("click", () => {
+      if (!confirm("Reset all deals to the original sample data? Your edits will be lost.")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(TIMESTAMP_KEY);
+      deals.length = 0;
+      deals.push(...structuredClone(defaultDeals));
+      expandedCompany = null;
+      renderSummary();
+      renderDeals();
+      renderLastUpdated();
+    });
+
+    renderDeals();
+    renderSummary();
+    renderLastUpdated();
+  </script>
+</body>
+</html>
